@@ -55,7 +55,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login'])->name('login.submit');
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
-    Route::middleware('auth:admin')->group(function () {
+    Route::middleware(['auth:admin', 'admin.blokir-stopped'])->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
         // Periode -- khusus Ketua Pelaksana + Divisi Teknis & Pemilihan
@@ -82,12 +82,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Divisi Teknis & Pemilihan (mereka yang mengelola presensi pemilih).
         Route::middleware('admin.can:bisaKelolaPemilih')->group(function () {
             Route::get('/periode/{periode}/pemilih-terkunci', [PemilihController::class, 'terkunci'])->name('pemilih.terkunci');
-            // Route::patch('/periode/{periode}/pemilih/{pemilih}/unlock', [PemilihController::class, 'unlock'])->name('pemilih.unlock');
+            Route::patch('/periode/{periode}/pemilih/{pemilih}/unlock', [PemilihController::class, 'unlock'])->name('pemilih.unlock');
             Route::get('/periode/{periode}/presensi', [AuditController::class, 'presensi'])->name('audit.presensi');
             Route::get('/pengaduan', [PengaduanController::class, 'index'])->name('pengaduan.index');
             Route::get('/pengaduan/{pengaduan}', [PengaduanController::class, 'show'])->name('pengaduan.show');
             Route::patch('/pengaduan/{pengaduan}/setujui', [PengaduanController::class, 'setujui'])->name('pengaduan.setujui');
             Route::patch('/pengaduan/{pengaduan}/tolak', [PengaduanController::class, 'tolak'])->name('pengaduan.tolak');
+            Route::patch('/pengaduan/unlock-langsung/{periode}/{pemilih}', [PengaduanController::class, 'unlockLangsung'])->name('pengaduan.unlockLangsung');
+            Route::post('/pengaduan/buka-blokir-email', [PengaduanController::class, 'bukaBlokirEmail'])->name('pengaduan.bukaBlokirEmail');
         });
 
         // Audit log -- khusus Ketua Pelaksana (wakil sementara superadmin).

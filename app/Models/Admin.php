@@ -25,6 +25,7 @@ class Admin extends Authenticatable
         'email',
         'password',
         'role',
+        'is_superadmin',
     ];
 
     protected $hidden = [
@@ -33,7 +34,18 @@ class Admin extends Authenticatable
 
     protected $casts = [
         'password' => 'hashed',
+        'is_superadmin' => 'boolean',
     ];
+
+    /**
+     * Cek apakah admin ini bisa login walau periode terbaru berstatus
+     * 'stopped'. Cuma superadmin yang boleh -- semua admin lain (termasuk
+     * Ketua Pelaksana) diblokir total saat status ini.
+     */
+    public function bisaAksesSaatStopped(): bool
+    {
+        return $this->is_superadmin === true;
+    }
 
     /**
      * Helper: cek apakah admin ini Ketua Pelaksana.

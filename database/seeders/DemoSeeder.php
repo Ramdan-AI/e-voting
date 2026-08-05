@@ -38,6 +38,9 @@ class DemoSeeder extends Seeder
                 'email' => $data['email'],
                 'password' => 'password123',
                 'role' => $data['role'],
+
+                // Hanya Ketua Testing yang menjadi Super Admin
+                'is_superadmin' => $data['email'] === 'ketua@test.com',
             ]);
         }
 
@@ -58,6 +61,7 @@ class DemoSeeder extends Seeder
             $pemilih = Pemilih::create([
                 'identifier' => $identifier,
                 'nama' => "Pemilih Testing {$i}",
+                'email' => "pemilih{$i}@test.com",
                 'password' => 'password123',
             ]);
 

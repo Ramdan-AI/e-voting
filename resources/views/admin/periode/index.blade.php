@@ -39,7 +39,7 @@
                         {{ $periode->tampilkan_hasil ? 'Sembunyikan Hasil di Publik' : 'Tampilkan Hasil di Publik' }}
                     </button>
                 </form>
-                <a href="{{ route('admin.pemilih.terkunci', $periode) }}" class="btn btn-outline">Lihat Akun Terkunci</a>
+                {{-- <a href="{{ route('admin.pemilih.terkunci', $periode) }}" class="btn btn-outline">Lihat Akun Terkunci</a> --}}
                 <a href="{{ route('admin.audit.presensi', $periode) }}" class="btn btn-outline">Log Presensi</a>
             </div>
 

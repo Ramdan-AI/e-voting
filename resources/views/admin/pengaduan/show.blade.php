@@ -4,7 +4,7 @@
 
 @section('content')
     <div style="margin-bottom:20px;">
-        <a href="{{ route('admin.pengaduan.index') }}" style="font-size:13px; color:var(--accent); text-decoration:none;">&larr; Kembali ke Daftar Pengaduan</a>
+        <a href="{{ route('admin.pengaduan.index') }}" style="font-size:14px; color:white; text-decoration:none;">&larr; Kembali ke Daftar Pengaduan</a>
         <h1 style="margin:8px 0 0;">Pengaduan — {{ $pengaduan->nama }}</h1>
         <span class="badge {{ $pengaduan->status === 'disetujui' ? 'running' : ($pengaduan->status === 'ditolak' ? 'stopped' : 'freeze') }}">
             {{ strtoupper($pengaduan->status) }}

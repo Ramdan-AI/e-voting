@@ -66,8 +66,8 @@
         </div>
 
         <div class="logo-block">
-            @if (file_exists(public_path('images/logo-stmik.jpeg')))
-                <img src="{{ public_path('images/logo-stmik.jpeg') }}" alt="Logo STMIK">
+            @if (file_exists(public_path('images/logo/STMIK.jpeg')))
+                <img src="{{ public_path('images/logo/STMIK.jpeg') }}" alt="Logo STMIK">
             @endif
         </div>
         <div class="kampus-nama">STMIK MARDIRA INDONESIA</div>

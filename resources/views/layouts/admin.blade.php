@@ -19,7 +19,7 @@
         body {
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg);
+            background: linear-gradient(rgba(20,4,6,0.6), rgba(20,4,6,0.6)), url('{{ asset('images/bg-utama.png') }}') center/cover no-repeat fixed;
             color: var(--text);
         }
         .topbar {
@@ -29,6 +29,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 20;
         }
         .topbar .brand { display: flex; align-items: center; gap: 10px;}
         .topbar .brand img { height: 50px; width: auto; }
@@ -54,13 +57,14 @@
             margin: 0 auto;
             padding: 32px 24px;
         }
-        h1 { color: var(--navy); font-size: 22px; margin: 0 0 20px; }
+        h1 { color: white; font-size: 22px; margin: 0 0 20px; }
         .card {
             background: #fff;
             border-radius: 12px;
             border: 1px solid var(--border);
             padding: 24px;
             margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(74,14,20,0.06);
         }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
@@ -140,9 +144,8 @@
                 @endif
 
                 @if ($periodeTerbaru && $admin->bisaKelolaPemilih())
-                    {{-- <a href="{{ route('admin.pemilih.terkunci', $periodeTerbaru) }}">Akun Terkunci</a> --}}
                     <a href="{{ route('admin.audit.presensi', $periodeTerbaru) }}">Log Presensi</a>
-                    <a href="{{ route('admin.pengaduan.index') }}">Pengaduan</a>
+                    <a href="{{ route('admin.pengaduan.index') }}">Akun Terkunci &amp; Pengaduan</a>
                 @endif
 
                 @if ($periodeTerbaru && $admin->bisaIsiLpj())

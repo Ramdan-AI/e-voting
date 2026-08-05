@@ -15,15 +15,14 @@
             --text: #222;
         }
         * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 32px 20px;
+       body {
+            margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(rgba(20,4,6,0.6), rgba(20,4,6,0.6)), url('{{ asset('images/bg-utama.png') }}') center/cover no-repeat fixed;
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 24px;
         }
         .wrap { max-width: 720px; margin: 0 auto; }
-        h1 { color: var(--navy); font-size: 22px; margin-bottom: 4px; }
+        h1 { color: white; font-size: 22px; margin-bottom: 4px; }
         p.subtitle { color: #666; font-size: 14px; margin-bottom: 28px; }
         .kandidat-list {
             display: grid;

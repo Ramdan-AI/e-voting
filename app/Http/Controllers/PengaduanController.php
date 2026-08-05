@@ -8,6 +8,7 @@ use App\Models\PengaduanAkun;
 use App\Models\Periode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 
 class PengaduanController extends Controller
 {
@@ -54,17 +55,56 @@ class PengaduanController extends Controller
     }
 
     /**
-     * [ADMIN] Daftar semua pengaduan, yang masih pending ditampilkan
-     * paling atas supaya cepat ditindaklanjuti.
+     * [ADMIN] Halaman gabungan: daftar akun terkunci (ambil langsung dari
+     * data pivot, paling akurat) + daftar pengaduan masuk (untuk lihat
+     * bukti selfie & kontak sebelum memutuskan). Digabung supaya admin
+     * tidak perlu bolak-balik 2 halaman terpisah.
      */
     public function index()
     {
+        $periodeTerbaru = Periode::latest('id')->first();
+
+        $terkunci = $periodeTerbaru
+            ? $periodeTerbaru->pemilihs()->wherePivot('status_akses', 'terkunci')->get()
+            : collect();
+
         $pengaduans = PengaduanAkun::with(['periode', 'diprosesOleh'])
             ->orderByRaw("status = 'pending' desc")
             ->latest('id')
             ->paginate(20);
 
-        return view('admin.pengaduan.index', compact('pengaduans'));
+        return view('admin.pengaduan.index', compact('periodeTerbaru', 'terkunci', 'pengaduans'));
+    }
+
+    /**
+     * [ADMIN] Buka kunci langsung dari daftar akun terkunci (tanpa lewat
+     * pengaduan) -- dipakai kalau admin sudah yakin lewat cara lain (WA,
+     * ketemu langsung, dsb), sama seperti PemilihController::unlock()
+     * tapi disatukan di sini biar aksinya di satu halaman yang sama.
+     */
+    public function unlockLangsung(Request $request, Periode $periode, Pemilih $pemilih)
+    {
+        $updated = DB::table('pemilih_periode')
+            ->where('periode_id', $periode->id)
+            ->where('pemilih_id', $pemilih->id)
+            ->where('status_akses', 'terkunci')
+            ->update([
+                'status_akses' => 'belum_voting',
+                'percobaan_gagal' => 0,
+                'updated_at' => now(),
+            ]);
+
+        if (! $updated) {
+            return back()->with('error', 'Akun ini tidak sedang dalam status terkunci.');
+        }
+
+        AuditLogAdmin::catat(
+            'unlock_akun',
+            "Membuka kunci akun {$pemilih->identifier} ({$pemilih->nama}) langsung dari halaman Akun Terkunci & Pengaduan.",
+            $periode->id
+        );
+
+        return back()->with('success', "Akun {$pemilih->identifier} berhasil dibuka kembali.");
     }
 
     /**
@@ -144,5 +184,28 @@ class PengaduanController extends Controller
         );
 
         return back()->with('success', 'Pengaduan ditolak.');
+    }
+
+    /**
+     * [ADMIN] Buka blokir percobaan login untuk orang yang BELUM PERNAH
+     * berhasil login sama sekali (jadi belum punya baris pemilih lokal,
+     * tidak muncul di daftar Akun Terkunci biasa). Kuncinya cuma email,
+     * sesuai throttle key yang dipakai AuthController::login().
+     */
+    public function bukaBlokirEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $key = 'login-pemilih:' . strtolower($validated['email']);
+        RateLimiter::clear($key);
+
+        AuditLogAdmin::catat(
+            'buka_blokir_email',
+            "Membuka blokir percobaan login untuk email {$validated['email']} (belum pernah login sukses sebelumnya)."
+        );
+
+        return back()->with('success', "Blokir untuk email {$validated['email']} berhasil dibuka.");
     }
 }

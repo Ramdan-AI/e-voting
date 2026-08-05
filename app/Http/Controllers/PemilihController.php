@@ -11,7 +11,7 @@ class PemilihController extends Controller
 {
     /**
      * [ADMIN] Daftar pemilih yang statusnya terkunci pada suatu periode
-     * (gagal login 5x). Ini yang jadi acuan admin waktu ada laporan masuk
+     * (gagal login 3x). Ini yang jadi acuan admin waktu ada laporan masuk
      * lewat Google Form bantuan ("akun kena rate limit").
      */
     public function terkunci(Periode $periode)

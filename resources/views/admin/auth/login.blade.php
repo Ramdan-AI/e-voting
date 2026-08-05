@@ -10,9 +10,25 @@
         body {
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg);
-            display: flex; align-items: center; justify-content: center;
-            min-height: 100vh; padding: 24px;
+                
+            background-image:
+                linear-gradient(
+                    rgba(20,20,20,.55),
+                    rgba(20,20,20,.55)
+                ),
+                url('{{ asset("images/bg-utama.png") }}');
+                
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+                
+            display: flex;
+            justify-content: center;
+            align-items: center;
+                
+            min-height: 100vh;
+            padding: 24px;
         }
         .card {
             background: #fff; border-radius: 12px;

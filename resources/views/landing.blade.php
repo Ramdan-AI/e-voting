@@ -39,10 +39,10 @@
         }
         .btn-login-nav:hover { background: var(--crimson); }
 
-        /* ---------- Hero (logo watermark) ---------- */
+        /* ---------- Hero (background foto) ---------- */
         .hero {
             position: relative; overflow: hidden;
-            background: radial-gradient(ellipse at top, var(--crimson) 0%, var(--garnet) 65%, #2e080c 100%);
+            background: linear-gradient(rgba(20,4,6,0.55), rgba(20,4,6,0.55)), url('{{ asset('images/bg-utama.png') }}') center/cover no-repeat;
             padding: 56px 20px 64px; text-align: center; color: #fff;
         }
         .hero-logos {
@@ -60,7 +60,7 @@
         .hero .turnout-sub { display: flex; justify-content: center; gap: 24px; font-size: 12px; color: #f0d9dc; margin-top: 8px; }
 
         /* ---------- Kandidat cards (section terpisah di bawah Hero) ---------- */
-        .wrap { max-width: 900px; margin: -30px auto 40px; padding: 0 20px; }
+        .wrap { max-width: 900px; margin: -30px auto 40px; padding: 0 20px; position: relative; z-index: 1; }
         .section-title { font-size: 15px; color: white; font-weight: 700; margin: 32px 0 16px; }
         .kandidat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; align-items: start; }
         .kandidat-card {
@@ -111,7 +111,7 @@
         }
         .modal-box h2 { font-size: 17px; color: var(--garnet); margin: 0 0 20px; }
         label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #444; }
-        input[type="text"], input[type="password"] {
+        input[type="text"], input[type="password"], input[type="email"], input[type="date"] {
             width: 100%; padding: 11px 12px; border: 1px solid #d5c1c4; border-radius: 8px;
             font-size: 15px; margin-bottom: 16px;
         }
@@ -150,7 +150,7 @@
 
     <div class="hero">
         <div class="hero-logos">
-            {{-- Add your logo images here, e.g.: --}}
+            {{-- Watermark tambahan opsional, background utama sudah dipasang lewat CSS .hero --}}
         </div>
         <div class="hero-content">
             <h1>{{ $periode->judul ?? 'Belum ada pemilihan yang sedang berjalan' }}</h1>
@@ -232,11 +232,14 @@
 
             <form method="POST" action="{{ route('login.submit') }}">
                 @csrf
-                <label for="identifier">NIM / Identifier</label>
-                <input type="text" id="identifier" name="identifier" value="{{ old('identifier') }}" required>
+                <label for="email">Email Kampus</label>
+                <input type="email" id="email" name="email" value="{{ old('email') }}" required>
 
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required>
+
+                <label for="tanggal_lahir">Tanggal Lahir</label>
+                <input type="date" id="tanggal_lahir" name="tanggal_lahir" value="{{ old('tanggal_lahir') }}" required>
 
                 <button type="submit" class="submit">Masuk</button>
             </form>

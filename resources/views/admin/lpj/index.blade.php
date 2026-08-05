@@ -4,7 +4,7 @@
 
 @section('content')
     <div style="margin-bottom:20px;">
-        <a href="{{ route('admin.periode.index') }}" style="font-size:13px; color:var(--accent); text-decoration:none;">&larr; Kembali ke Periode</a>
+        <a href="{{ route('admin.periode.index') }}" style="font-size:14px; color:white; text-decoration:none;">&larr; Kembali ke Periode</a>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
             <h1 style="margin:0;">Review LPJ — {{ $periode->judul }}</h1>
             <a href="{{ route('admin.lpj.exportSemua', $periode) }}" class="btn btn-primary">Export Semua LPJ (PDF)</a>

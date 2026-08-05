@@ -19,7 +19,24 @@ return new class extends Migration
             // 3 role sesuai struktur panitia inti yang sudah disepakati.
             // Superadmin BELUM dimasukkan di sini karena posisinya masih
             // dibahas terpisah (bukan bagian dari 3 akun panitia tahunan).
-            $table->enum('role', ['ketua_pelaksana', 'koordinator_teknis', 'koordinator_acara']);
+            $table->enum('role', [
+
+                'ketua_pelaksana',
+
+                'sekretaris',
+
+                'bendahara',
+
+                'divisi_regulasi_verifikasi',
+
+                'divisi_acara_pengawasan',
+
+                'divisi_teknis_pemilihan',
+
+                'divisi_humas_media',
+
+            ]);
+            $table->boolean('is_superadmin')->default(false);
             $table->timestamps();
         });
     }

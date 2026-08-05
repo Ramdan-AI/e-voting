@@ -4,7 +4,7 @@
 
 @section('content')
     <div style="margin-bottom:20px;">
-        <a href="{{ route('admin.periode.index') }}" style="font-size:13px; color:var(--accent); text-decoration:none;">&larr; Kembali ke Periode</a>
+        <a href="{{ route('admin.periode.index') }}" style="font-size:14px; color:white; text-decoration:none;">&larr; Kembali ke Periode</a>
         <h1 style="margin:8px 0 0;">Log Presensi — {{ $periode->judul }}</h1>
         <p style="font-size:12px; color:#888; margin:4px 0 0;">
             Hanya mencatat waktu submit suara, TIDAK mencatat kandidat yang dipilih (anonimitas tetap terjaga).

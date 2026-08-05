@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Pemilih;
 use App\Models\Periode;
+use App\Services\CampusAuthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends Controller
 {
@@ -22,82 +23,139 @@ class AuthController extends Controller
     /**
      * [PUBLIK] Login pemilih untuk periode yang sedang aktif.
      *
-     * CATATAN PENTING: versi ini pakai identifier + password LOKAL
-     * (Hash::check biasa) — KHUSUS untuk testing lokal, sesuai permintaan.
-     * Begitu integrasi API kampus / mekanisme OTP sudah diputuskan tim IT,
-     * yang perlu diganti CUKUP bagian validasi password di bawah (langkah
-     * ke-5). Struktur pivot, rate limiting, dan alur voting setelahnya
-     * tidak perlu dibongkar ulang.
+     * Alur BARU (menggantikan versi password-lokal + OTP sebelumnya, sesuai
+     * hasil diskusi dengan tim IT kampus):
+     * 1. Pemilih login pakai email + password + tanggal lahir.
+     * 2. Kredensial itu divalidasi LANGSUNG ke API kampus lewat
+     *    CampusAuthService -- sistem KPUM tidak pernah menyimpan/validasi
+     *    password sendiri lagi.
+     * 3. Begitu API konfirmasi valid, sistem AUTO-PROVISION data pemilih
+     *    lokal (bikin baris `pemilih` + `pemilih_periode` kalau belum ada)
+     *    -- ini menggantikan kebutuhan Import DPT manual, karena DPT
+     *    "terbentuk sendiri" begitu orang yang berhak login.
+     * 4. TIDAK ADA lagi tahap OTP -- tanggal lahir yang sekarang berfungsi
+     *    sebagai faktor tambahan (mirip captcha identitas), makanya OTP
+     *    dianggap tidak perlu lagi oleh tim IT.
+     *
+     * CATATAN SOAL RATE LIMITING: sebelum orang berhasil login minimal
+     * sekali, sistem BELUM punya baris `pemilih` lokal untuk dia -- jadi
+     * penguncian 3x percobaan gagal di tahap ini pakai RateLimiter bawaan
+     * Laravel (kunci sementara 15 menit, keyed by email), BUKAN status
+     * 'terkunci' di tabel pivot seperti sebelumnya. Konsekuensinya: orang
+     * yang belum PERNAH berhasil login sama sekali tidak akan muncul di
+     * halaman admin "Akun Terkunci" kalau dia salah 3x -- dia cuma perlu
+     * nunggu 15 menit, atau admin bisa buka blokirnya manual by email
+     * (lihat PengaduanController::bukaBlokirEmail()).
+     * Begitu pemilih PERNAH sukses login sekali, penguncian selanjutnya
+     * kembali pakai mekanisme pivot `pemilih_periode` yang sudah ada
+     * (percobaan_gagal, status_akses) -- sama seperti sebelumnya.
      */
     public function login(Request $request)
     {
         $validated = $request->validate([
-            'identifier' => ['required', 'string'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+            'tanggal_lahir' => ['required', 'date_format:Y-m-d'],
         ]);
 
-        // 1. Harus ada periode yang sedang berjalan.
         $periode = Periode::aktif();
 
         if (! $periode) {
-            return back()->withErrors(['identifier' => 'Tidak ada periode pemilihan yang sedang berjalan saat ini.']);
+            return back()->withErrors(['email' => 'Tidak ada periode pemilihan yang sedang berjalan saat ini.']);
         }
 
-        // 2. Identifier harus terdaftar di master data pemilih.
-        $pemilih = Pemilih::where('identifier', $validated['identifier'])->first();
+        $throttleKey = 'login-pemilih:' . strtolower($validated['email']);
 
-        if (! $pemilih) {
-            // Pesan spesifik sesuai dokumen fitur awal, supaya pemilih tahu
-            // harus lapor lewat Google Form bantuan dengan kategori yang tepat.
-            return back()->withErrors(['identifier' => 'NIM/identifier tidak ditemukan dalam sistem.']);
+        if (RateLimiter::tooManyAttempts($throttleKey, 3)) {
+            $detik = RateLimiter::availableIn($throttleKey);
+            $menit = ceil($detik / 60);
+
+            return back()->withErrors([
+                'email' => "Terlalu banyak percobaan gagal. Coba lagi dalam {$menit} menit, atau hubungi panitia lewat form bantuan.",
+            ]);
         }
 
-        // 3. Harus terdaftar sebagai pemilih pada periode aktif ini (DPT).
+        try {
+            $hasil = app(CampusAuthService::class)->verify(
+                $validated['email'],
+                $validated['password'],
+                $validated['tanggal_lahir']
+            );
+        } catch (\Throwable $e) {
+            return back()->withErrors(['email' => 'Tidak bisa menghubungi server kampus saat ini. Coba lagi sebentar lagi.']);
+        }
+
+        if (! $hasil['valid']) {
+            RateLimiter::hit($throttleKey, 900); // kunci 15 menit kalau sudah 3x
+
+            $sisa = 3 - RateLimiter::attempts($throttleKey);
+
+            $pesan = $hasil['message'] ?? 'Email, password, atau tanggal lahir tidak cocok.';
+
+            if ($sisa > 0) {
+                $pesan .= " Sisa percobaan: {$sisa}.";
+            }
+
+            return back()->withErrors(['email' => $pesan]);
+        }
+
+        RateLimiter::clear($throttleKey);
+
+        if (! $hasil['nim']) {
+            return back()->withErrors(['email' => 'Data NIM tidak ditemukan pada respons server kampus. Hubungi panitia lewat form bantuan.']);
+        }
+
+        // Auto-provision: bikin baris pemilih lokal kalau belum ada.
+        // Menggantikan Import DPT manual -- DPT "terbentuk sendiri" dari
+        // orang yang memang berhak login lewat API kampus.
+        $pemilih = Pemilih::firstOrNew(['identifier' => $hasil['nim']]);
+
+        $namaDariApi = $hasil['nama'] ?? null;
+
+        if (! $pemilih->exists) {
+            // Kalau API belum kirim 'nama' (belum dikonfirmasi tim IT),
+            // pakai NIM sebagai placeholder sementara -- tidak error,
+            // cuma tampilannya kurang bagus sampai field itu tersedia.
+            $pemilih->nama = $namaDariApi ?: $hasil['nim'];
+        } elseif ($namaDariApi && $pemilih->nama === $pemilih->identifier) {
+            // "Self-healing": kalau sebelumnya sempat kepaksa pakai NIM
+            // sebagai placeholder nama, begitu API mulai kirim nama asli,
+            // otomatis diperbaiki di sini -- tidak perlu perbaikan data manual.
+            $pemilih->nama = $namaDariApi;
+        }
+
+        $pemilih->email = $hasil['email'];
+        $pemilih->save();
+
+        // Auto-daftarkan ke periode aktif ini kalau belum terdaftar.
         $pivot = DB::table('pemilih_periode')
             ->where('pemilih_id', $pemilih->id)
             ->where('periode_id', $periode->id)
             ->first();
 
         if (! $pivot) {
-            return back()->withErrors(['identifier' => 'Anda tidak terdaftar sebagai pemilih pada periode ini.']);
+            DB::table('pemilih_periode')->insert([
+                'pemilih_id' => $pemilih->id,
+                'periode_id' => $periode->id,
+                'status_akses' => 'belum_voting',
+                'percobaan_gagal' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $pivot = DB::table('pemilih_periode')
+                ->where('pemilih_id', $pemilih->id)
+                ->where('periode_id', $periode->id)
+                ->first();
         }
 
-        // 4. Cek status akses: terkunci atau sudah pernah vote.
         if ($pivot->status_akses === 'terkunci') {
-            return back()->withErrors(['identifier' => 'Akun terkunci karena terlalu banyak percobaan gagal. Silakan hubungi panitia lewat form bantuan.']);
+            return back()->withErrors(['email' => 'Akun terkunci. Silakan hubungi panitia lewat form bantuan.']);
         }
 
         if ($pivot->status_akses === 'sudah_voting') {
-            return back()->withErrors(['identifier' => 'NIM ini sudah pernah digunakan untuk memberikan suara pada periode ini.']);
+            return back()->withErrors(['email' => 'Akun ini sudah pernah digunakan untuk memberikan suara pada periode ini.']);
         }
-
-        // 5. Validasi password. INI bagian yang akan diganti begitu
-        // integrasi API kampus / OTP final.
-        if (! Hash::check($validated['password'], $pemilih->password)) {
-            $percobaanBaru = $pivot->percobaan_gagal + 1;
-            $statusBaru = $percobaanBaru >= 5 ? 'terkunci' : $pivot->status_akses;
-
-            DB::table('pemilih_periode')
-                ->where('id', $pivot->id)
-                ->update([
-                    'percobaan_gagal' => $percobaanBaru,
-                    'status_akses' => $statusBaru,
-                    'updated_at' => now(),
-                ]);
-
-            if ($statusBaru === 'terkunci') {
-                return back()->withErrors(['identifier' => 'Password salah 5 kali. Akun terkunci, silakan hubungi panitia lewat form bantuan.']);
-            }
-
-            $sisaPercobaan = 5 - $percobaanBaru;
-
-            return back()->withErrors(['identifier' => "Password salah. Sisa percobaan: {$sisaPercobaan}."]);
-        }
-
-        // 6. Login berhasil: reset percobaan gagal, simpan konteks periode di session.
-        DB::table('pemilih_periode')
-            ->where('id', $pivot->id)
-            ->update(['percobaan_gagal' => 0, 'updated_at' => now()]);
 
         Auth::guard('pemilih')->login($pemilih);
         $request->session()->put('periode_id', $periode->id);
