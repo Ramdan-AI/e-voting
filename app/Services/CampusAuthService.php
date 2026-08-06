@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Http;
 class CampusAuthService
 {
     /**
-     * Satu-satunya titik yang tahu detail teknis API kampus (URL, format
-     * parameter, format response). Kalau nanti IT ubah detailnya, cukup
+     * detail teknis API kampus (URL, format
+     * parameter, format response).
      * ubah isi method ini -- AuthController dan alur login lainnya tidak
      * perlu disentuh sama sekali.
      *
@@ -46,6 +46,12 @@ class CampusAuthService
             'nama' => $body['data']['nama'] ?? null,
             'email' => $body['data']['email'] ?? $email,
             'tanggal_lahir' => $body['data']['tanggal_lahir'] ?? $tanggalLahir,
+            // TODO: nama key 'tipe' ini masih TEBAKAN -- belum dikonfirmasi
+            // tim IT field ini beneran ada di response atau namanya apa
+            // (bisa jadi 'role', 'jenis', 'kategori', dst). Sampai
+            // dikonfirmasi, ini akan selalu null dan sistem fallback aman
+            // (tidak error, cuma kolom "Tipe" di log presensi kosong).
+            'tipe' => $body['data']['tipe'] ?? null,
         ];
     }
 }

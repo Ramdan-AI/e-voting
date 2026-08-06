@@ -127,6 +127,8 @@ class AuthController extends Controller
         $pemilih->email = $hasil['email'];
         $pemilih->save();
 
+        $tipeDariApi = $hasil['tipe'] ?? null;
+
         // Auto-daftarkan ke periode aktif ini kalau belum terdaftar.
         $pivot = DB::table('pemilih_periode')
             ->where('pemilih_id', $pemilih->id)
@@ -139,6 +141,7 @@ class AuthController extends Controller
                 'periode_id' => $periode->id,
                 'status_akses' => 'belum_voting',
                 'percobaan_gagal' => 0,
+                'tipe_pemilih' => $tipeDariApi,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -147,6 +150,11 @@ class AuthController extends Controller
                 ->where('pemilih_id', $pemilih->id)
                 ->where('periode_id', $periode->id)
                 ->first();
+        } elseif ($tipeDariApi && ! $pivot->tipe_pemilih) {
+            // Self-healing sama seperti nama: begitu API mulai kirim tipe,
+            // data lama yang sempat kosong otomatis terisi tanpa perbaikan manual.
+            DB::table('pemilih_periode')->where('id', $pivot->id)->update(['tipe_pemilih' => $tipeDariApi]);
+            $pivot->tipe_pemilih = $tipeDariApi;
         }
 
         if ($pivot->status_akses === 'terkunci') {

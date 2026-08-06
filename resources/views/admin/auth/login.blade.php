@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Admin — E-Voting KPUM</title>
     <style>
-        :root { --navy: #1f3864; --accent: #2e5c8a; --bg: #f4f6f9; --error: #b3261e; }
+        :root { 
+            --garnet:#4a0e14;
+            --ruby:#7c1d24;
+            --bg: #f4f6f9; 
+            --error: #b3261e; 
+        }
         * { box-sizing: border-box; }
         body {
             margin: 0;
@@ -31,22 +36,77 @@
             padding: 24px;
         }
         .card {
-            background: #fff; border-radius: 12px;
+            background: #fff; 
+            border-radius: 12px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-            padding: 40px 36px; width: 100%; max-width: 400px;
+            padding: 40px 36px; 
+            width: 100%; max-width: 400px;
         }
-        h1 { font-size: 20px; color: var(--navy); margin: 0 0 4px; }
-        p.subtitle { font-size: 14px; color: #666; margin: 0 0 28px; }
-        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #444; }
-        input { width: 100%; padding: 11px 12px; border: 1px solid #d5dae1; border-radius: 8px; font-size: 15px; margin-bottom: 18px; }
-        button { width: 100%; padding: 12px; background: var(--navy); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
-        button:hover { background: var(--accent); }
-        .errors { background: #fdecea; border: 1px solid #f5c2be; color: var(--error); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 18px; }
-        .errors ul { margin: 0; padding-left: 18px; }
+        h1 { 
+            text-align: center;
+            font-size: 20px; 
+            color:var(--garnet); 
+            margin: 0 0 4px; 
+        }
+        p.subtitle { 
+            text-align: center;
+            font-size: 14px; 
+            color: #666; 
+            margin: 0 0 28px; 
+        }
+        label { 
+            display: block; 
+            font-size: 13px; 
+            font-weight: 600; 
+            margin-bottom: 6px;
+            color: #444; 
+        }
+        input { 
+            width: 100%; 
+            padding: 11px 12px; 
+            border: 1px solid #d5dae1; border-radius: 8px; 
+            font-size: 15px; 
+            margin-bottom: 18px; 
+        }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background:var(--garnet); 
+            color: #fff; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 15px; 
+            font-weight: 600; 
+            cursor: pointer; 
+        }
+        button:hover { 
+            background:var(--ruby); 
+        }
+        .errors { 
+            background: #fdecea; 
+            border: 1px solid #f5c2be; 
+            color: var(--error); 
+            padding: 10px 14px; 
+            border-radius: 8px; 
+            font-size: 13px; 
+            margin-bottom: 18px; 
+        }
+        .errors ul { 
+            margin: 0; 
+            padding-left: 18px; 
+        }
     </style>
 </head>
 <body>
     <div class="card">
+        <div style="text-align:center; margin-bottom:18px;">
+
+        <img
+            src="{{ asset('images/logo/Logo_KPUM_STMIK.jpg') }}"
+            width="90"
+            alt="Logo KPUM">
+
+        </div>
         <h1>Login Panitia</h1>
         <p class="subtitle">Dashboard Admin — Sistem E-Voting KPUM</p>
 
@@ -73,3 +133,4 @@
     </div>
 </body>
 </html>
+
