@@ -21,10 +21,14 @@
                 <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', preg_replace('/^0/', '62', $pengaduan->no_hp)) }}" target="_blank" class="btn btn-outline" style="margin-left:8px; padding:3px 10px; font-size:11px;">Chat WA</a>
             </p>
             <p style="margin-bottom:0;"><strong>Periode saat pengaduan dikirim:</strong> {{ $pengaduan->periode->judul ?? '—' }}</p>
+            <p>
+                <strong>Keterangan :</strong>
+                {{ $pengaduan->keterangan }}
+            </p>
         </div>
         <div>
-            <p style="font-size:12px; color:#888; margin-bottom:6px;">Foto Selfie (Bukti Identitas)</p>
-            <img src="{{ Storage::url($pengaduan->foto_selfie) }}" alt="Selfie {{ $pengaduan->nama }}" style="width:160px; height:160px; object-fit:cover; border-radius:10px; border:1px solid var(--border);">
+            <p style="font-size:12px; color:#888; margin-bottom:6px;">Foto KTM (Bukti Identitas)</p>
+            <img src="{{ Storage::url($pengaduan->foto_ktm) }}" alt="Selfie {{ $pengaduan->nama }}" style="width:160px; height:160px; object-fit:cover; border-radius:10px; border:1px solid var(--border);">
         </div>
     </div>
 

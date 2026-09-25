@@ -36,7 +36,7 @@
         <h1>Form Pengaduan Akun</h1>
         <p class="subtitle">
             Gunakan form ini kalau akun Anda terkunci, NIM/identifier tidak ditemukan, atau kendala login lainnya.
-            Sertakan foto selfie sebagai bukti identitas -- panitia akan mengecek status Anda sebelum membuka kunci akun.
+            Sertakan foto ktm sebagai bukti identitas -- panitia akan mengecek status Anda sebelum membuka kunci akun.
         </p>
 
         @if (session('success'))
@@ -56,7 +56,7 @@
         <form method="POST" action="{{ route('pengaduan.store') }}" enctype="multipart/form-data">
             @csrf
 
-            <label>NIM / NIP / Identifier</label>
+            <label>NIM / NID / NIP</label>
             <input type="text" name="identifier" value="{{ old('identifier') }}" required>
 
             <label>Nama Lengkap</label>
@@ -70,12 +70,14 @@
             <input type="text" name="no_hp" value="{{ old('no_hp') }}" placeholder="08xxxxxxxxxx"
                 inputmode="numeric" pattern="[0-9]*" maxlength="20"
                 oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
-            <div class="hint">Hanya angka, tanpa spasi atau tanda baca. Panitia mungkin menghubungi lewat WhatsApp kalau lebih cepat daripada email.</div>
 
-            <label>Foto Selfie (bukti identitas)</label>
-            <input type="file" name="foto_selfie" accept="image/*" required>
+            <label>Foto KTM (bukti identitas)</label>
+            <input type="file" name="foto_ktm" accept="image/*" required>
             <div class="hint">Pastikan wajah terlihat jelas. Maks 2MB.</div>
 
+            <label>Keterangan (laporkan kendala yang terjadi, lupa password/email, atau akun terkunci)</label>
+            <input type="text" name="keterangan" value="{{ old('keterangan') }}" required>
+            <div class="hint">Jelaskan kendala Anda secara singkat dan jelas.</div>
             <button type="submit">Kirim Pengaduan</button>
         </form>
 

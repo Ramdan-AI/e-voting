@@ -17,17 +17,6 @@ class AdminAuthController extends Controller
         return view('admin.auth.login');
     }
 
-    /**
-     * [PUBLIK] Proses login admin.
-     * Pakai guard terpisah ('admin') dari guard pemilih, supaya sesi
-     * admin dan sesi pemilih tidak pernah bentrok/tertukar walau
-     * dibuka di browser yang sama.
-     *
-     * Kalau periode terbaru berstatus 'stopped', SEMUA admin diblokir
-     * login kecuali superadmin -- ini yang menegakkan aturan "stopped =
-     * cuma superadmin yang bisa akses" di titik paling awal (login),
-     * bukan cuma dibatasi per halaman.
-     */
     public function login(Request $request)
     {
         $validated = $request->validate([

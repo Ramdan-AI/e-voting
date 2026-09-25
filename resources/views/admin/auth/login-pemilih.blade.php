@@ -95,7 +95,7 @@
 <body>
     <div class="card">
         <h1>Login Pemilih</h1>
-        <p class="subtitle">Sistem E-Voting KPUM — masukkan identifier dan password Anda.</p>
+        <p class="subtitle">Sistem E-Voting KPUM</p>
 
         @if ($errors->any())
             <div class="errors">
@@ -110,16 +110,20 @@
         <form method="POST" action="{{ route('login.submit') }}">
             @csrf
 
-            <label for="identifier">NIM / Identifier</label>
-            <input type="text" id="identifier" name="identifier" value="{{ old('identifier') }}" autofocus required>
+            <label>Email</label>
+            <input type="email" name="email" value="{{ old('email') }}"required>
 
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
+            <label>Password</label>
+            <input type="password" name="password" required>
+
+            <label>Tanggal Lahir</label>
+            <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir') }}" required>
 
             <button type="submit">Masuk</button>
         </form>
-
-        <p class="note">Versi testing lokal — login memakai password lokal, bukan sistem kampus.</p>
+        <p class="note">
+            Login menggunakan akun Sistem Akademik STMIK Mardira Indonesia.
+        </p>
     </div>
 </body>
 </html>

@@ -112,6 +112,7 @@
             <div class="empty">Belum ada kandidat yang terdaftar untuk periode ini.</div>
         @else
             <form id="voting-form">
+                @csrf
                 <div class="kandidat-list">
                     @foreach ($kandidats as $kandidat)
                         <label class="kandidat-card" data-id="{{ $kandidat->id }}">
@@ -138,6 +139,7 @@
     </div>
 
     <script>
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const form = document.getElementById('voting-form');
         const messageBox = document.getElementById('message');
         const submitBtn = document.getElementById('submit-btn');
@@ -175,7 +177,7 @@
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'X-CSRF-TOKEN': csrfToken,
                         },
                         body: JSON.stringify({ kandidat_id: selected.value }),
                     });

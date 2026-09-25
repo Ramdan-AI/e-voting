@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -19,37 +20,6 @@ class AuthController extends Controller
     {
         return view('auth.login-pemilih');
     }
-
-    /**
-     * [PUBLIK] Login pemilih untuk periode yang sedang aktif.
-     *
-     * Alur BARU (menggantikan versi password-lokal + OTP sebelumnya, sesuai
-     * hasil diskusi dengan tim IT kampus):
-     * 1. Pemilih login pakai email + password + tanggal lahir.
-     * 2. Kredensial itu divalidasi LANGSUNG ke API kampus lewat
-     *    CampusAuthService -- sistem KPUM tidak pernah menyimpan/validasi
-     *    password sendiri lagi.
-     * 3. Begitu API konfirmasi valid, sistem AUTO-PROVISION data pemilih
-     *    lokal (bikin baris `pemilih` + `pemilih_periode` kalau belum ada)
-     *    -- ini menggantikan kebutuhan Import DPT manual, karena DPT
-     *    "terbentuk sendiri" begitu orang yang berhak login.
-     * 4. TIDAK ADA lagi tahap OTP -- tanggal lahir yang sekarang berfungsi
-     *    sebagai faktor tambahan (mirip captcha identitas), makanya OTP
-     *    dianggap tidak perlu lagi oleh tim IT.
-     *
-     * CATATAN SOAL RATE LIMITING: sebelum orang berhasil login minimal
-     * sekali, sistem BELUM punya baris `pemilih` lokal untuk dia -- jadi
-     * penguncian 3x percobaan gagal di tahap ini pakai RateLimiter bawaan
-     * Laravel (kunci sementara 15 menit, keyed by email), BUKAN status
-     * 'terkunci' di tabel pivot seperti sebelumnya. Konsekuensinya: orang
-     * yang belum PERNAH berhasil login sama sekali tidak akan muncul di
-     * halaman admin "Akun Terkunci" kalau dia salah 3x -- dia cuma perlu
-     * nunggu 15 menit, atau admin bisa buka blokirnya manual by email
-     * (lihat PengaduanController::bukaBlokirEmail()).
-     * Begitu pemilih PERNAH sukses login sekali, penguncian selanjutnya
-     * kembali pakai mekanisme pivot `pemilih_periode` yang sudah ada
-     * (percobaan_gagal, status_akses) -- sama seperti sebelumnya.
-     */
     public function login(Request $request)
     {
         $validated = $request->validate([
@@ -82,7 +52,11 @@ class AuthController extends Controller
                 $validated['tanggal_lahir']
             );
         } catch (\Throwable $e) {
-            return back()->withErrors(['email' => 'Tidak bisa menghubungi server kampus saat ini. Coba lagi sebentar lagi.']);
+            report($e);
+
+            return back()->withErrors([
+                'email' => 'Gagal menghubungi server verifikasi kampus. Silakan coba lagi beberapa saat lagi.',
+            ]);
         }
 
         if (! $hasil['valid']) {
@@ -101,30 +75,29 @@ class AuthController extends Controller
 
         RateLimiter::clear($throttleKey);
 
-        if (! $hasil['nim']) {
+        if (!$hasil['id']) {
             return back()->withErrors(['email' => 'Data NIM tidak ditemukan pada respons server kampus. Hubungi panitia lewat form bantuan.']);
         }
-
-        // Auto-provision: bikin baris pemilih lokal kalau belum ada.
-        // Menggantikan Import DPT manual -- DPT "terbentuk sendiri" dari
-        // orang yang memang berhak login lewat API kampus.
-        $pemilih = Pemilih::firstOrNew(['identifier' => $hasil['nim']]);
+        $pemilih = Pemilih::firstOrNew(['identifier' => (string) $hasil['id']]);
 
         $namaDariApi = $hasil['nama'] ?? null;
 
         if (! $pemilih->exists) {
-            // Kalau API belum kirim 'nama' (belum dikonfirmasi tim IT),
-            // pakai NIM sebagai placeholder sementara -- tidak error,
-            // cuma tampilannya kurang bagus sampai field itu tersedia.
-            $pemilih->nama = $namaDariApi ?: $hasil['nim'];
-        } elseif ($namaDariApi && $pemilih->nama === $pemilih->identifier) {
-            // "Self-healing": kalau sebelumnya sempat kepaksa pakai NIM
-            // sebagai placeholder nama, begitu API mulai kirim nama asli,
-            // otomatis diperbaiki di sini -- tidak perlu perbaikan data manual.
-            $pemilih->nama = $namaDariApi;
+
+            $pemilih->nama = $namaDariApi ?: $hasil['email'];
+            $pemilih->email = $hasil['email'];
+
+            // Password dummy (tidak dipakai untuk login)
+            $pemilih->password = Hash::make(str()->random(40));
+        } else {
+
+            if ($namaDariApi && $pemilih->nama === $pemilih->email) {
+                $pemilih->nama = $namaDariApi;
+            }
+
+            $pemilih->email = $hasil['email'];
         }
 
-        $pemilih->email = $hasil['email'];
         $pemilih->save();
 
         $tipeDariApi = $hasil['tipe'] ?? null;

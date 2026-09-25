@@ -14,6 +14,11 @@ return [
     |
     */
 
+    'stimik' => [
+        'url' => env('STIMIK_API_URL'),
+        'key' => env('STIMIK_API_KEY'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

@@ -157,14 +157,16 @@
             <p class="subtitle">Komisi Pemilihan Umum Mahasiswa — STMIK Mardira Indonesia</p>
 
             @if ($periode && $ringkasan)
-                <div class="turnout-num">{{ $ringkasan['turnout'] }}%</div>
+                {{-- <div class="turnout-num">{{ $ringkasan['turnout'] }}%</div>
                 <div class="turnout-label">Tingkat Partisipasi</div>
                 <div class="turnout-bar-track">
                     <div class="turnout-bar-fill" style="width: {{ $ringkasan['turnout'] }}%;"></div>
-                </div>
+                </div> --}}
                 <div class="turnout-sub">
-                    <span>{{ $ringkasan['total_suara'] }} suara masuk</span>
-                    <span>{{ $ringkasan['total_pemilih'] }} pemilih terdaftar</span>
+                    <span id="total-suara-masuk" style="font-size: 20px">
+                        {{ $ringkasan['total_suara'] }} suara masuk
+                    </span>
+                    {{-- <span>{{ $ringkasan['total_pemilih'] }} pemilih terdaftar</span> --}}
                 </div>
             @endif
         </div>
@@ -174,7 +176,7 @@
                 <div class="section-title">Pasangan Calon</div>
                 <div class="kandidat-grid">
                     @foreach ($ringkasan['kandidats'] as $kandidat)
-                        <div class="kandidat-card">
+                        <div class="kandidat-card" data-kandidat-id="{{ $kandidat->id }}">
                             <div class="foto-wrap">
                                 @if ($kandidat->foto && $kandidat->foto !== 'dummy.jpg' && \Illuminate\Support\Facades\Storage::disk('public')->exists($kandidat->foto))
                                     <img src="{{ Storage::url($kandidat->foto) }}" alt="{{ $kandidat->nama }}">
@@ -186,14 +188,26 @@
                                 <span class="nomor">Paslon #{{ $kandidat->nomor_urut }}</span>
                                 <h3>{{ $kandidat->nama }}</h3>
 
-                                @if ($ringkasan['tampilkan_hasil'])
-                                    <div class="persen-num">{{ $kandidat->persentase }}%</div>
-                                    <div class="bar-track">
-                                        <div class="bar-fill" style="width: {{ $kandidat->persentase }}%;"></div>
-                                    </div>
-                                @else
-                                    <div class="hasil-tersembunyi">Hasil suara belum ditampilkan panitia.</div>
-                                @endif
+                                <div class="hasil-kandidat"
+                                     data-kandidat-id="{{ $kandidat->id }}">
+
+                                    @if ($ringkasan['tampilkan_hasil'])
+                                        <div class="persen-num persen-value">
+                                            {{ $kandidat->persentase }}%
+                                        </div>
+                                    
+                                        <div class="bar-track">
+                                            <div
+                                                class="bar-fill persen-bar"
+                                                style="width: {{ $kandidat->persentase }}%;">
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="hasil-tersembunyi">
+                                            Hasil suara belum ditampilkan panitia.
+                                        </div>
+                                    @endif
+                                </div>
 
                                 <button class="vismi-toggle" onclick="toggleVismi(this)">
                                     <span>Lihat Visi &amp; Misi</span>
@@ -251,14 +265,135 @@
     <script>
         function toggleVismi(btn) {
             const content = btn.nextElementSibling;
+
             content.classList.toggle('open');
+
             const chev = btn.querySelector('.chev');
-            chev.innerHTML = content.classList.contains('open') ? '&#9652;' : '&#9662;';
+
+            chev.innerHTML = content.classList.contains('open')
+                ? '&#9652;'
+                : '&#9662;';
         }
 
+
+        /**
+         * Mengambil hasil suara terbaru dari server.
+         */
+        async function updateLiveHasil() {
+            try {
+                const response = await fetch(
+                    "{{ route('landing.liveHasil') }}",
+                    {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        cache: 'no-store'
+                    }
+                );
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (!data.tersedia) {
+                    return;
+                }
+
+
+                /*
+                 * Update jumlah suara masuk.
+                 */
+                const totalSuaraElement = document.getElementById(
+                    'total-suara-masuk'
+                );
+
+                if (totalSuaraElement) {
+                    totalSuaraElement.textContent =
+                        `${data.total_suara} suara masuk`;
+                }
+
+
+                /*
+                 * Update hasil kandidat.
+                 */
+                data.hasil.forEach(kandidat => {
+
+                    const container = document.querySelector(
+                        `.hasil-kandidat[data-kandidat-id="${kandidat.id}"]`
+                    );
+
+                    if (!container) {
+                        return;
+                    }
+
+
+                    /*
+                     * Kalau admin MENUTUP hasil.
+                     */
+                    if (!data.tampilkan_hasil) {
+
+                        container.innerHTML = `
+                            <div class="hasil-tersembunyi">
+                                Hasil suara belum ditampilkan panitia.
+                            </div>
+                        `;
+
+                        return;
+                    }
+
+
+                    /*
+                     * Kalau admin MEMBUKA hasil.
+                     */
+                    container.innerHTML = `
+                        <div class="persen-num persen-value">
+                            ${kandidat.persentase}%
+                        </div>
+
+                        <div class="bar-track">
+                            <div
+                                class="bar-fill persen-bar"
+                                style="width: ${kandidat.persentase}%;">
+                            </div>
+                        </div>
+                    `;
+                });
+
+            } catch (error) {
+                console.error(
+                    'Gagal mengambil hasil suara terbaru:',
+                    error
+                );
+            }
+        }
+
+
+        /*
+         * Cek hasil terbaru setiap 5 detik.
+         */
+        setInterval(updateLiveHasil, 5000);
+
+
+        /*
+         * Ambil data terbaru segera setelah halaman selesai dimuat.
+         */
+        updateLiveHasil();
+
+
+        /*
+         * Buka kembali modal login jika ada error.
+         */
         @if ($errors->any())
             document.getElementById('loginModal').classList.add('open');
         @endif
     </script>
+    
+    <footer style="text-align:center; padding:16px; font-size:12px; color:#8a7375;">
+        Dikembangkan oleh <a href="https://ganti-dengan-link-portfolio-kamu.com" target="_blank" rel="noopener" style="color:var(--garnet); font-weight:600; text-decoration:none;">Muhammad Ramdan</a>
+    </footer>
 </body>
 </html>

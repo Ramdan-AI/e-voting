@@ -20,6 +20,15 @@ class AuditLogPresensi extends Model
         'created_at' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $log) {
+            if (! $log->created_at) {
+                $log->created_at = now();
+            }
+        });
+    }
+
     public function pemilih(): BelongsTo
     {
         return $this->belongsTo(Pemilih::class);

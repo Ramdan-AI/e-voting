@@ -7,14 +7,7 @@ use App\Models\Periode;
 class LandingController extends Controller
 {
     /**
-     * [PUBLIK] Halaman utama tanpa login. Menampilkan turnout real-time,
-     * kartu profil tiap kandidat (foto, nomor urut, visi-misi -- SELALU
-     * tampil, ini profil publik biasa), dan persentase suara PER kandidat
-     * (cuma tampil kalau toggle admin dibuka -- tetap menjaga fitur
-     * "sembunyikan hasil saat voting berlangsung"). Form login pemilih
-     * TIDAK di sini lagi -- dipindah ke navbar (lihat landing.blade.php).
-     * TIDAK ada link ke login admin/superadmin -- sengaja dipisah, cuma
-     * diakses lewat URL terpisah yang diketahui panitia.
+     * [PUBLIK] Halaman utama.
      */
     public function index()
     {
@@ -25,20 +18,23 @@ class LandingController extends Controller
         if ($periode) {
             $totalSuara = $periode->suaras()->count();
             $totalPemilih = $periode->pemilihs()->count();
-            $turnout = $totalPemilih > 0 ? round(($totalSuara / $totalPemilih) * 100, 2) : 0;
 
-            // Profil kandidat SELALU diambil (foto, visi-misi bukan rahasia).
+            $turnout = $totalPemilih > 0
+                ? round(($totalSuara / $totalPemilih) * 100, 2)
+                : 0;
+
             $kandidats = $periode->kandidats()
                 ->withCount('suaras')
                 ->orderBy('nomor_urut')
                 ->get();
 
             foreach ($kandidats as $kandidat) {
-                // persentase cuma dihitung & ditampilkan kalau toggle admin
-                // dibuka; kalau belum, biarkan null supaya view tahu harus
-                // sembunyikan angkanya (bukan tampilkan 0%, itu beda makna).
                 $kandidat->persentase = $periode->tampilkan_hasil
-                    ? ($totalSuara > 0 ? round(($kandidat->suaras_count / $totalSuara) * 100, 2) : 0)
+                    ? (
+                        $totalSuara > 0
+                        ? round(($kandidat->suaras_count / $totalSuara) * 100, 2)
+                        : 0
+                    )
                     : null;
             }
 
@@ -52,5 +48,56 @@ class LandingController extends Controller
         }
 
         return view('landing', compact('periode', 'ringkasan'));
+    }
+
+
+    /**
+     * [PUBLIK] Mengambil hasil suara terbaru untuk landing page.
+     *
+     * Dipanggil oleh JavaScript secara berkala agar hasil suara
+     * dapat berubah tanpa reload halaman.
+     */
+    public function liveHasil()
+    {
+        $periode = Periode::untukPublik();
+
+        if (! $periode) {
+            return response()->json([
+                'tersedia' => false,
+                'message' => 'Tidak ada periode pemilihan yang sedang berjalan.',
+            ], 404);
+        }
+
+        $totalSuara = $periode->suaras()->count();
+
+        $kandidats = $periode->kandidats()
+            ->withCount('suaras')
+            ->orderBy('nomor_urut')
+            ->get();
+
+        $hasil = $kandidats->map(function ($kandidat) use ($totalSuara) {
+            $persentase = $totalSuara > 0
+                ? round(($kandidat->suaras_count / $totalSuara) * 100, 2)
+                : 0;
+
+            return [
+                'id' => $kandidat->id,
+                'nomor_urut' => $kandidat->nomor_urut,
+                'jumlah_suara' => $kandidat->suaras_count,
+                'persentase' => $persentase,
+            ];
+        });
+
+        return response()
+            ->json([
+                'tersedia' => true,
+                'periode_id' => $periode->id,
+                'tampilkan_hasil' => (bool) $periode->tampilkan_hasil,
+                'total_suara' => $totalSuara,
+                'hasil' => $hasil,
+            ])
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 }

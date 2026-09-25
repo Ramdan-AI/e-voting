@@ -21,7 +21,7 @@ class PengaduanController extends Controller
     }
 
     /**
-     * [PUBLIK] Submit pengaduan. Foto selfie WAJIB, dipakai admin sebagai
+     * [PUBLIK] Submit pengaduan. Foto ktm WAJIB, dipakai admin sebagai
      * bukti identitas sebelum membuka kunci akun.
      */
     public function store(Request $request)
@@ -31,12 +31,13 @@ class PengaduanController extends Controller
             'nama' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:100'],
             'no_hp' => ['required', 'string', 'max:20', 'regex:/^[0-9]+$/'],
-            'foto_selfie' => ['required', 'image', 'max:2048'],
+            'foto_ktm' => ['required', 'image', 'max:2048'],
+            'keterangan' => ['required', 'string', 'max:255'],
         ], [
             'no_hp.regex' => 'No. HP/WhatsApp hanya boleh berisi angka, tanpa huruf, spasi, atau tanda baca.',
         ]);
 
-        $path = $request->file('foto_selfie')->store('pengaduan-selfie', 'public');
+        $path = $request->file('foto_ktm')->store('pengaduan-ktm', 'public');
 
         $periodeAktif = Periode::aktif();
 
@@ -45,7 +46,8 @@ class PengaduanController extends Controller
             'nama' => $validated['nama'],
             'email' => $validated['email'],
             'no_hp' => $validated['no_hp'],
-            'foto_selfie' => $path,
+            'foto_ktm' => $path,
+            'keterangan' => $validated['keterangan'],
             'periode_id' => $periodeAktif?->id,
             'status' => 'pending',
         ]);
@@ -57,7 +59,7 @@ class PengaduanController extends Controller
     /**
      * [ADMIN] Halaman gabungan: daftar akun terkunci (ambil langsung dari
      * data pivot, paling akurat) + daftar pengaduan masuk (untuk lihat
-     * bukti selfie & kontak sebelum memutuskan). Digabung supaya admin
+     * bukti ktm & kontak sebelum memutuskan). Digabung supaya admin
      * tidak perlu bolak-balik 2 halaman terpisah.
      */
     public function index()
@@ -129,7 +131,25 @@ class PengaduanController extends Controller
         $pivot = $pengaduan->cariPivotPemilih();
 
         if (! $pivot) {
-            return back()->with('error', 'Pemilih ini tidak ditemukan terdaftar pada periode manapun. Tidak bisa dibuka kuncinya lewat sini.');
+            // Bukan berarti gagal -- banyak pengaduan yang memang bukan soal
+            // akun terkunci (mis. cuma lupa email/password API kampus, atau
+            // sekadar tanya prosedur). Tetap approve pengaduannya supaya
+            // tiketnya selesai, tapi TIDAK ada apapun yang di-unlock karena
+            // memang tidak ada baris pemilih untuk di-unlock.
+            $pengaduan->update([
+                'status' => 'disetujui',
+                'catatan_admin' => $request->input('catatan_admin') ?: 'Disetujui tanpa buka kunci (tidak ada baris pemilih ditemukan untuk periode ini).',
+                'diproses_oleh' => auth('admin')->id(),
+                'diproses_pada' => now(),
+            ]);
+
+            AuditLogAdmin::catat(
+                'setujui_pengaduan',
+                "Menyetujui pengaduan {$pengaduan->identifier} ({$pengaduan->nama}) TANPA buka kunci (pemilih tidak ditemukan di periode manapun).",
+                $pengaduan->periode_id
+            );
+
+            return back()->with('success', "Pengaduan {$pengaduan->identifier} disetujui (tidak ada akun yang perlu dibuka kunci).");
         }
 
         if ($pivot->status_akses === 'sudah_voting') {

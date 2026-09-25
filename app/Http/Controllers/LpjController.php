@@ -35,7 +35,6 @@ class LpjController extends Controller
 
     /**
      * [ADMIN - divisi] Simpan LPJ, bisa sebagai draft atau langsung diajukan
-     * (dibedakan lewat tombol submit yang beda name/value di form).
      */
     public function update(Request $request, Periode $periode)
     {

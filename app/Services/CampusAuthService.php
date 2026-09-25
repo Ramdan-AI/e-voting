@@ -6,26 +6,18 @@ use Illuminate\Support\Facades\Http;
 
 class CampusAuthService
 {
-    /**
-     * detail teknis API kampus (URL, format
-     * parameter, format response).
-     * ubah isi method ini -- AuthController dan alur login lainnya tidak
-     * perlu disentuh sama sekali.
-     *
-     * Return array:
-     *   ['valid' => true, 'nim' => ..., 'email' => ..., 'tanggal_lahir' => ...]
-     *   ['valid' => false, 'message' => '...']
-     *
-     * @throws \RuntimeException kalau API tidak bisa dihubungi sama sekali
-     * (server kampus down, timeout, dsb) -- ini beda dari "kredensial salah".
-     */
     public function verify(string $email, string $password, string $tanggalLahir): array
     {
-        $response = Http::timeout(10)->get(config('services.stimik.url') . 'db-users', [
-            'email' => $email,
-            'password' => $password,
-            'tanggal_lahir' => $tanggalLahir,
-        ]);
+        $response = Http::withHeaders([
+            'x-api-key' => config('services.stimik.key'),
+            'Accept'    => 'application/json',
+        ])
+            ->timeout(10)
+            ->post(config('services.stimik.url') . '/user/check', [
+                'email'           => $email,
+                'password'        => $password,
+                'tanggal_lahir'   => $tanggalLahir,
+            ]);
 
         if ($response->failed()) {
             throw new \RuntimeException('Tidak bisa menghubungi server kampus. Coba lagi beberapa saat.');
@@ -33,25 +25,20 @@ class CampusAuthService
 
         $body = $response->json();
 
-        if (($body['status'] ?? null) !== 'success') {
+        if (($body['status'] ?? false) !== true) {
             return [
                 'valid' => false,
-                'message' => $body['message'] ?? 'Email, password, atau tanggal lahir tidak cocok.',
+                'message' => 'Email, password, atau tanggal lahir tidak sesuai.',
             ];
         }
 
         return [
             'valid' => true,
-            'nim' => $body['data']['nim'] ?? null,
-            'nama' => $body['data']['nama'] ?? null,
-            'email' => $body['data']['email'] ?? $email,
-            'tanggal_lahir' => $body['data']['tanggal_lahir'] ?? $tanggalLahir,
-            // TODO: nama key 'tipe' ini masih TEBAKAN -- belum dikonfirmasi
-            // tim IT field ini beneran ada di response atau namanya apa
-            // (bisa jadi 'role', 'jenis', 'kategori', dst). Sampai
-            // dikonfirmasi, ini akan selalu null dan sistem fallback aman
-            // (tidak error, cuma kolom "Tipe" di log presensi kosong).
-            'tipe' => $body['data']['tipe'] ?? null,
+            'id' => $body['data']['id'] ?? null,
+            'nama' => $body['data']['name'] ?? null,
+            'email' => $body['data']['email'] ?? null,
+            'tanggal_lahir' => $body['data']['tanggal_lahir'] ?? null,
+            'tipe' => $body['data']['type_user'] ?? null,
         ];
     }
 }

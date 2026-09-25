@@ -21,6 +21,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
+Route::get('/api/live-hasil', [LandingController::class, 'liveHasil'])
+    ->name('landing.liveHasil');
+    
 // GET /login cukup redirect ke landing page, karena form login pemilih
 // sudah menyatu di sana (bukan halaman terpisah).
 Route::get('/login', function () {
@@ -57,6 +60,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::middleware(['auth:admin', 'admin.blokir-stopped'])->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        // Real-time: dipanggil berkala oleh JS di admin.dashboard untuk
+        // refresh angka suara masuk tanpa reload halaman.
+        Route::get('/periode/{periode}/hasil-live', [SuaraController::class, 'hasilLengkap'])->name('suara.hasilLive');
 
         // Periode -- khusus Ketua Pelaksana + Divisi Teknis & Pemilihan
         // (mereka yang menjalankan operasional harian sistem e-Voting).
